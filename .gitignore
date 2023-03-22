@@ -1,0 +1,13 @@
+# Temporary files
+prova**
+test**
+output**
+*.log
+
+# Temporary directories
+temp/
+old/
+
+# KDE directory preferences
+.directory
+
