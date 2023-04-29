@@ -1,0 +1,115 @@
+#!/bin/bash
+# limit-battery-charge
+# Copyright (C) 2023  Luca Pellegrini
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+PERCENT=80
+
+## Displays help message
+function help_message {
+    case "$LANG" in
+        it_IT*|it_CH*)  # Italian translation
+            echo "limit-battery-charge
+Uso: limit-battery-charge [opzioni]
+  o: limit-battery-charge PERCENT
+Imposta limite alla ricarica massima della batteria del portatile.
+
+Opzioni:
+  -h, --help      visualizza questo messaggio d'aiuto ed esce
+  -r, --reset     resetta il limite a 100%
+      --version   visualizza informazioni sulla versione ed esce
+
+Parametro PERCENT: valore percentuale da impostare come limite
+alla ricarica massima (default: 80). Deve essere compreso tra 50 e 100."
+            return
+            ;;
+        *)  echo "limit-battery-charge
+Usage: limit-battery-charge [options]
+   or: limit-battery-charge PERCENT
+Set battery charge end threshold for your laptop.
+
+Options:
+  -h, --help      display this help message and exit
+  -r, --reset     reset end threshold to 100%
+      --version   display version information and exit
+
+PERCENT parameter: percentage value to be set as battery charge
+end threshold (default: 80). Must be an integer between 50 and 100."
+            return
+            ;;
+    esac
+}
+
+## Displays version and copying information
+function version_message {
+    echo "limit-battery-charge
+v1.0
+Copyright (C) 2023  Luca Pellegrini
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>."
+}
+
+## Reads arguments passed on the command line
+# if (number of arguments) > 0:
+if [[ $# -gt 0 ]]; then
+    case "$1" in
+        -h|--help)  help_message
+            exit 0
+            ;;
+        -r|--reset) PERCENT=100
+            ;;
+        --version)  version_message
+            exit 0
+            ;;
+        *)  # if the argument is a number
+            if [[ $1 =~ ^-?[0-9]+$ ]]; then
+                if [[ $1 -ge 50 && $1 -le 100 ]]; then
+                    PERCENT=$1
+                else
+                    echo "limit-battery-charge: value not valid: must be an integer between 50 and 100"
+                    exit 2
+                fi
+            else
+                echo "limit-battery-charge: unknown argument: $1"
+                exit 2
+            fi
+            ;;
+    esac
+fi
+
+if [[ -f /sys/class/power_supply/BAT0/charge_control_end_threshold ]]; then
+    echo $PERCENT | sudo tee /sys/class/power_supply/BAT0/charge_control_end_threshold > /dev/null
+    case "$LANG" in
+        it_IT*|it_CH*)  echo -n "Limite di carica della batteria impostato a "
+            ;;
+        *)  echo -n "Battery charge end threshold set to "
+            ;;
+    esac
+    cat /sys/class/power_supply/BAT0/charge_control_end_threshold
+else
+    echo "limit-battery-charge: no battery detected at '/sys/class/power_supply/BAT0' (error 1)"
+    exit 1
+fi
