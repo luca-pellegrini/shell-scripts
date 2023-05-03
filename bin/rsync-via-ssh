@@ -1,0 +1,249 @@
+#!/bin/bash
+# rsync-via-ssh
+# Copyright (C) 2023  Luca Pellegrini
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+
+## Italian description
+# Questo programma permette di eseguire una sincronizzazione di file
+# e cartelle con rsync via SSH, tra due computer (ad esempio, tra un
+# laptop e un desktop).
+# Richiede che entrambi i computer siano sulla stessa rete locale
+# (o comunque individuabili tramite indirizzo IP), e che il server
+# OpenSSH sia in esecuzione sulla macchina di destinazione.
+
+
+## Displays help message
+function help_message {
+    case "$LANG" in
+        it_IT*|it_CH*)  # Italian translation
+            echo "rsync-via-ssh
+Uso: rsync-via-ssh -d <IP_address> [-p <porta>]
+  o: rsync-via-ssh -i
+  o: rsync-via-ssh [opzioni]...
+Sincronizza file e cartelle tra due computer con rsync via SSH
+
+Opzioni:
+  -i, --interactive           esegue il programma in modalità interattiva
+                              (non ancora implementata)
+  -d, --dest-ip <IP_address>  indirizzo IP dell'host remoto (la destinazione)
+  -p, --port <porta>          porta a cui connettersi sull'host remoto
+  -L, --log-file              specifica nome personalizzato per il file di log
+  -h, --help                  visualizza questo messaggio ed esce
+      --version               visualizza informazioni su versione e licenza"
+            ;;
+        *)
+            echo "rsync-via-ssh
+Usage: rsync-via-ssh -d <IP_address> [-p <port>]
+   or: rsync-via-ssh -i
+   or: rsync-via-ssh [options]...
+Sync files and directories between two computers with rsync via SSH
+
+Options:
+  -i, --interactive           run the script in interactive mode
+                              (not implemented yet)
+  -d, --dest-ip <IP_address>  IP address of the remote host (the destination)
+  -p, --port <port>           port to connect to on the remote host
+  -L, --log-file              custom filename for the log file
+  -h, --help                  display this help message and exit
+      --version               display version and license information"
+            ;;
+    esac
+}
+
+## Displays version and copying information
+function version_message {
+    echo "rsync-via-ssh
+v1.0
+Copyright (C) 2023  Luca Pellegrini
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>."
+}
+
+## Displays "unknown argument" message
+function unknown_option {
+    case "$LANG" in
+        it_IT*|it_CH*)  # Italian translation
+            echo "rsync-via-ssh: opzione sconosciuta '$1'. Vedi 'rsync-via-ssh --help'"
+            ;;
+        *)
+            echo "rsync-via-ssh: unknown argument '$1'. See 'rsync-via-ssh --help'"
+            ;;
+    esac
+}
+
+## Declare some variables (default values)
+date_and_time="$(date +%Y.%m.%d-%H.%M.%S)"
+log_file="rsync-${date_and_time}.log"
+
+DEST_IP=  # IP address of destination
+port=  # port on the remote host
+#interactive=  # TODO: implement interactive mode
+
+## Process command line options
+while [[ -n $1 ]]; do
+    case "$1" in
+        -h|--help)
+            help_message
+            exit 0
+            ;;
+        -d|--dest-ip)
+            shift
+            DEST_IP="$1"
+            ;;
+        -p|--port)
+            shift
+            port="$1"
+            ;;
+        -L|--log-file)
+            shift
+            log_file="$1"
+            ;; 
+        --version)
+            version_message
+            exit 0
+            ;;
+        *)
+            unknown_option $1 >&2
+            exit 1
+            ;;
+    esac
+    shift
+done
+
+## DEST_IP must be specified
+#  If string is empty, raise error
+if [[ -z "$DEST_IP" ]]; then
+    echo "rsync-via-ssh: indirizzo IP della destinazione non specificato (error 2)" >&2
+    exit 2
+else
+    ## Destinazione: host SSH a cui rsync deve connettersi
+    DEST="$USER@$DEST_IP"
+fi
+
+
+## Prints header for the log file
+#  The header is currently only in Italian (I'll add an English version soon)
+function print_header {
+    echo "### Sincronizzazione con rsync ###
+Data e ora di inizio:       ${date_and_time}
+Utente:                     $USER
+Sorgente:                   $HOSTNAME
+Destinazione: indirizzo IP: $DEST_IP"
+}
+
+# Cartelle da sincronizzare
+#$HOME/bin/
+#$HOME/config-files/
+#/Data/Dendron/
+#/Data/Documenti/
+#/Data/eseguibili/
+#/Data/fonts/
+#/Data/Git/
+#/Data/gufw/
+#/Data/Immagini/
+#/Data/Libri/
+#/Data/Musica/
+#/Data/Programmazione/
+#/Data/thunderbird/
+#/Data/Video/
+
+## Runs rsync
+function run_rsync {
+    args="$1 -av --mkpath" # rsync options
+    export RSYNC_RSH="ssh -p $port" # remote shell which rsync should use
+
+    echo -e "\nCopia di ~/bin..."
+    rsync $args --exclude 'MATLAB*' --exclude 'matlab*' --exclude 'tor-browser*' "$HOME/bin/" "$DEST:$HOME/bin/"
+    echo -e "\nCopia di ~/config-files..."
+    rsync $args "$HOME/config-files/" "$DEST:$HOME/config-files/"
+    echo -e "\nCopia di /Data/Dendron..."
+    rsync $args --delete /Data/Dendron/ "$DEST:/Data/Dendron/"
+    echo -e "\nCopia di /Data/Documenti..."
+    rsync $args --exclude "Università" /Data/Documenti/ "$DEST:/Data/Documenti/"
+    rsync $args --delete /Data/Documenti/Università/ "$DEST:/Data/Documenti/Università/"
+    echo -e "\nCopia di /Data/eseguibili/AppImage..."
+    rsync $args --delete /Data/eseguibili/AppImage/ "$DEST:/Data/eseguibili/AppImage/"
+    #echo -e "\nCopia di /Data/fonts..."
+    #rsync $args --delete /Data/fonts/ "$DEST:/Data/fonts/"
+    echo -e "\nCopia di /Data/Git..."
+    rsync $args --delete --exclude "Altri/" --exclude "venv/" /Data/Git/ "$DEST:/Data/Git/"
+    #echo -e "\nCopia di /Data/Immagini..."
+    #rsync $args /Data/Immagini/ "$DEST:/Data/Immagini/"
+    #echo -e "\nCopia di /Data/Musica..."
+    #rsync $args --delete --exclude "Downloads" /Data/Musica/ "$DEST:/Data/Musica/"
+    #echo -e "\nCopia di /Data/Podcast..."
+    #rsync $args /Data/Podcast/ "$DEST:/Data/Podcast/"
+    echo -e "\nCopia di /Data/Programmazione..."
+    rsync $args --delete --exclude "venv/" /Data/Programmazione/ "$DEST:/Data/Programmazione/"
+    #echo -e "\nCopia di /Data/Video..."
+    #rsync $args /Data/Video/ "$DEST:/Data/Video/"
+}
+
+## DRY RUN: perform a trial run with no changes made
+function dry_run {
+    run_rsync --dry-run
+}
+
+## Ask if user wants to perform a dry run
+#  The text displayed on the screen is currently only in Italian
+#  (I may add an English translation in the future)
+read -p "Eseguire una prova (DRY RUN) della sincronizzazione? [S/n] "
+if [[ -z "$REPLY" || $REPLY == "S" || $REPLY == "s" ]]; then
+    log_file_1="rsync-DRY-RUN-${date_and_time}.log"
+    # Dry run, redirect output to 'log_file_1'
+    print_header &>> $log_file_1
+    echo "###  DRY RUN  ###" &>> $log_file_1
+    dry_run &>> $log_file_1
+    
+    echo "
+I log della prova di sincronizzazione sono stati salvati nel file: 
+$(pwd)/${log_file_1}"
+fi
+
+## Run rsync and redirect output to 'log_file'
+while true; do
+    read -p "Eseguire la sincronizzazione ora? [s/n] "
+    if [[ $REPLY == "S" || $REPLY == "s" ]]; then
+        print_header &>> $log_file
+        run_rsync &>> $log_file
+        echo "
+I log della sincronizzazione sono stati salvati nel file: 
+${log_file}"
+        break
+    elif [[ $REPLY == "N" || $REPLY == "n" ]]; then
+        break
+    fi
+done
+
+## Unset some variables
+unset args
+unset RSYNC_RSH
+
+# Return codes:
+#   0:  Success
+#   1:  Invalid command line option
+#   2:  IP address of destination not specified
