@@ -25,7 +25,7 @@
 # OpenSSH sia in esecuzione sulla macchina di destinazione.
 
 
-## Displays help message
+## Display help message
 function help_message {
     case "$LANG" in
         it_IT*|it_CH*)  # Italian translation
@@ -63,7 +63,7 @@ Options:
     esac
 }
 
-## Displays version and copying information
+## Display version and copying information
 function version_message {
     echo "rsync-via-ssh
 v1.0
@@ -83,25 +83,36 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>."
 }
 
-## Displays "unknown argument" message
+## Print "unknown argument" message to stderr
 function unknown_option {
     case "$LANG" in
         it_IT*|it_CH*)  # Italian translation
-            echo "rsync-via-ssh: opzione sconosciuta '$1'. Vedi 'rsync-via-ssh --help'"
+            echo "rsync-via-ssh: opzione sconosciuta '$1'. Vedi 'rsync-via-ssh --help'" >&2
             ;;
         *)
-            echo "rsync-via-ssh: unknown argument '$1'. See 'rsync-via-ssh --help'"
+            echo "rsync-via-ssh: unknown argument '$1'. See 'rsync-via-ssh --help'" >&2
             ;;
     esac
 }
 
-## Declare some variables (default values)
-date_and_time="$(date +%Y.%m.%d-%H.%M.%S)"
-log_file="rsync-${date_and_time}.log"
 
-DEST_IP=  # IP address of destination
-port=  # port on the remote host
-#interactive=  # TODO: implement interactive mode
+## Define some variables
+date_and_time="$(date +%Y.%m.%d-%H.%M.%S)"
+DEST_IP=        # IP address of destination
+port=           # port on the remote host
+#interactive=   # TODO: implement interactive mode
+
+if [[ -n "$XDG_CACHE_HOME" ]]; then
+    log_dir="$XDG_CACHE_HOME/rsync-via-ssh"
+else
+    log_dir="$HOME/.cache/rsync-via-ssh"
+fi
+if [[ ! -d "$log_dir" ]]; then
+    mkdir -p "$log_dir" || exit 1
+fi
+log_file_0="$log_dir/${date_and_time}.log"
+
+
 
 ## Process command line options
 while [[ -n $1 ]]; do
@@ -109,6 +120,14 @@ while [[ -n $1 ]]; do
         -h|--help)
             help_message
             exit 0
+            ;;
+        --version)
+            version_message
+            exit 0
+            ;;
+        -i|--interactive)
+            interactive=1
+            break
             ;;
         -d|--dest-ip)
             shift
@@ -120,21 +139,17 @@ while [[ -n $1 ]]; do
             ;;
         -L|--log-file)
             shift
-            log_file="$1"
-            ;; 
-        --version)
-            version_message
-            exit 0
+            log_file_0="$1"
             ;;
         *)
-            unknown_option $1 >&2
+            unknown_option $1
             exit 1
             ;;
     esac
     shift
 done
 
-## DEST_IP must be specified
+## DEST_IP variable must be specified
 #  If string is empty, raise error
 if [[ -z "$DEST_IP" ]]; then
     echo "rsync-via-ssh: indirizzo IP della destinazione non specificato (error 2)" >&2
@@ -144,8 +159,14 @@ else
     DEST="$USER@$DEST_IP"
 fi
 
+## Check if 'port' variable has been set
+if [[ -n "$port" ]]; then
+    export RSYNC_RSH="ssh -p $port" # specify custom port which the OpenSSH server
+                                    # on the remote host is listening on
+fi
 
-## Prints header for the log file
+
+## Print header of the log file
 #  The header is currently only in Italian (I'll add an English version soon)
 function print_header {
     echo "### Sincronizzazione con rsync ###
@@ -171,11 +192,10 @@ Destinazione: indirizzo IP: $DEST_IP"
 #/Data/thunderbird/
 #/Data/Video/
 
-## Runs rsync
+## Run rsync
 function run_rsync {
-    args="$1 -av --mkpath" # rsync options
-    export RSYNC_RSH="ssh -p $port" # remote shell which rsync should use
-
+    args="$1 -avh --update --mkpath" # rsync options
+    
     echo -e "\nCopia di ~/bin..."
     rsync $args --exclude 'MATLAB*' --exclude 'matlab*' --exclude 'tor-browser*' "$HOME/bin/" "$DEST:$HOME/bin/"
     echo -e "\nCopia di ~/config-files..."
@@ -208,31 +228,35 @@ function dry_run {
     run_rsync --dry-run
 }
 
+
 ## Ask if user wants to perform a dry run
 #  The text displayed on the screen is currently only in Italian
 #  (I may add an English translation in the future)
 read -p "Eseguire una prova (DRY RUN) della sincronizzazione? [S/n] "
+
 if [[ -z "$REPLY" || $REPLY == "S" || $REPLY == "s" ]]; then
-    log_file_1="rsync-DRY-RUN-${date_and_time}.log"
-    # Dry run, redirect output to 'log_file_1'
+    log_file_1="$log_dir/DRY-RUN-${date_and_time}.log"
+    
+    # Do a dry run and save output to 'log_file_1'
     print_header &>> $log_file_1
     echo "###  DRY RUN  ###" &>> $log_file_1
     dry_run &>> $log_file_1
     
     echo "
 I log della prova di sincronizzazione sono stati salvati nel file: 
-$(pwd)/${log_file_1}"
+${log_file_1}"
+    less $log_file_1
 fi
 
-## Run rsync and redirect output to 'log_file'
+## Run rsync and save output to 'log_file_0'
 while true; do
     read -p "Eseguire la sincronizzazione ora? [s/n] "
     if [[ $REPLY == "S" || $REPLY == "s" ]]; then
-        print_header &>> $log_file
-        run_rsync &>> $log_file
+        print_header &>> $log_file_0
+        run_rsync &>> $log_file_0
         echo "
 I log della sincronizzazione sono stati salvati nel file: 
-${log_file}"
+${log_file_0}"
         break
     elif [[ $REPLY == "N" || $REPLY == "n" ]]; then
         break
@@ -245,5 +269,5 @@ unset RSYNC_RSH
 
 # Return codes:
 #   0:  Success
-#   1:  Invalid command line option
+#   1:  Invalid command line option; generic error
 #   2:  IP address of destination not specified
