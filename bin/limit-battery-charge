@@ -33,9 +33,9 @@ Opzioni:
 
 Parametro PERCENT: valore percentuale da impostare come limite
 alla ricarica massima (default: 80). Deve essere compreso tra 50 e 100."
-            return
             ;;
-        *)  echo "limit-battery-charge
+        *)  
+            echo "limit-battery-charge
 Usage: limit-battery-charge [options]
    or: limit-battery-charge PERCENT
 Set battery charge end threshold for your laptop.
@@ -47,7 +47,6 @@ Options:
 
 PERCENT parameter: percentage value to be set as battery charge
 end threshold (default: 80). Must be an integer between 50 and 100."
-            return
             ;;
     esac
 }
@@ -72,29 +71,32 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>."
 }
 
-## Reads arguments passed on the command line
-# if (number of arguments) > 0:
+## Process command line options
+#  if (number of arguments) > 0:
 if [[ $# -gt 0 ]]; then
     case "$1" in
-        -h|--help)  help_message
+        -h|--help)
+            help_message
             exit 0
             ;;
-        -r|--reset) PERCENT=100
-            ;;
-        --version)  version_message
+        --version)
+            version_message
             exit 0
+            ;;
+        -r|--reset)
+            PERCENT=100
             ;;
         *)  # if the argument is a number
             if [[ $1 =~ ^-?[0-9]+$ ]]; then
                 if [[ $1 -ge 50 && $1 -le 100 ]]; then
                     PERCENT=$1
                 else
-                    echo "limit-battery-charge: value not valid: must be an integer between 50 and 100"
-                    exit 2
+                    echo "limit-battery-charge: value not valid: must be an integer between 50 and 100" >&2
+                    exit 1
                 fi
             else
-                echo "limit-battery-charge: unknown argument: $1"
-                exit 2
+                echo "limit-battery-charge: unknown argument: $1" >&2
+                exit 1
             fi
             ;;
     esac
@@ -110,6 +112,11 @@ if [[ -f /sys/class/power_supply/BAT0/charge_control_end_threshold ]]; then
     esac
     cat /sys/class/power_supply/BAT0/charge_control_end_threshold
 else
-    echo "limit-battery-charge: no battery detected at '/sys/class/power_supply/BAT0' (error 1)"
-    exit 1
+    echo "limit-battery-charge: no battery detected at '/sys/class/power_supply/BAT0' (error 2)" >&2
+    exit 2
 fi
+
+# Return codes:
+#   0:  Success
+#   1:  Invalid command line option
+#   2:  No battery detected
