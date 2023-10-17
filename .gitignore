@@ -1,13 +1,64 @@
-# Temporary files
+# Temporary files and directories
 prova**
 test**
+temp**
 output**
 *.log
 *.old
-
-# Temporary directories
+*.tmp
+*.bak
 temp/
+tmp/
 old/
+
+# Diff files
+*.patch
+*.diff
+
+
+## Python
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Translations
+*.mo
+*.pot
+
+# Sphinx documentation
+docs/_build/
 
 ## Linux
 *~
@@ -50,6 +101,11 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
+## macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
 ## Kate
 # Swap Files #
 .*.kate-swp
@@ -62,9 +118,13 @@ $RECYCLE.BIN/
 !.vscode/launch.json
 !.vscode/extensions.json
 !.vscode/*.code-snippets
+*.code-workspace
 
 # Local History for Visual Studio Code
 .history/
 
 # Built Visual Studio Code Extensions
 *.vsix
+
+## JetBrains IDEs
+.idea/
