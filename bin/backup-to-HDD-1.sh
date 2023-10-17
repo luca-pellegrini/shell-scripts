@@ -111,12 +111,12 @@ Destinazione:           $DEST"
 
 
 function sync_multimedia_dirs {
-    args="$1 -avh --update --mkpath" # rsync options
+    args="$1 -rltDvh --update --mkpath" # rsync options
     
     echo -e "\nCopia di /Data/Immagini..."
     rsync $args --exclude 'temp/' /Data/Immagini/ "$DEST/Immagini/"
     echo -e "\nCopia di /Data/Musica..."
-    rsync $args --delete --exclude "Downloads" /Data/Musica/ "$DEST/Musica/"
+    rsync $args --delete --exclude "temp/" /Data/Musica/ "$DEST/Musica/"
     echo -e "\nCopia di /Data/Podcast..."
     rsync $args /Data/Podcast/ "$DEST/Podcast/"
     echo -e "\nCopia di /Data/Video..."
