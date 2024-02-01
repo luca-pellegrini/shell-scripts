@@ -176,22 +176,6 @@ Sorgente:                   $HOSTNAME
 Destinazione: indirizzo IP: $DEST_IP"
 }
 
-# Cartelle da sincronizzare
-#$HOME/bin/
-#$HOME/config-files/
-#/Data/Dendron/
-#/Data/Documenti/
-#/Data/eseguibili/
-#/Data/fonts/
-#/Data/Git/
-#/Data/gufw/
-#/Data/Immagini/
-#/Data/Libri/
-#/Data/Musica/
-#/Data/Programmazione/
-#/Data/thunderbird/
-#/Data/Video/
-
 ## Run rsync
 function run_rsync {
     args="$1 -rltDvh --update --mkpath" # rsync options
@@ -204,9 +188,6 @@ function run_rsync {
     rsync $args --delete /Data/Dendron/ "$DEST:/Data/Dendron/"
     echo -e "\nCopia di /Data/Documenti..."
     rsync $args --delete --exclude "__pycache__/" /Data/Documenti/ "$DEST:/Data/Documenti/"
-    #rsync $args --delete --exclude "__pycache__/" /Data/Documenti/Università/ "$DEST:/Data/Documenti/Università/"
-    #echo -e "\nCopia di /Data/eseguibili/AppImage..."
-    #rsync $args --delete /Data/eseguibili/AppImage/ "$DEST:/Data/eseguibili/AppImage/"
     echo -e "\nCopia di /Data/eseguibili..."
     rsync $args --delete --exclude "jetbrains/" /Data/eseguibili/ "$DEST:/Data/eseguibili/"
     #echo -e "\nCopia di /Data/fonts..."
@@ -278,8 +259,3 @@ done
 ## Unset some variables
 unset args
 #unset RSYNC_RSH
-
-# Return codes:
-#   0:  Success
-#   1:  Invalid command line option; generic error
-#   2:  IP address of destination not specified
