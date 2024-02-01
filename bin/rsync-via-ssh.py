@@ -1,17 +1,40 @@
 #!/usr/bin/python3
 """rsync-via-ssh.py: Python implementation of the `rsync-via-ssh` script"""
 
+import argparse
+# import logging
 import os
 import re
 import sys
-import argparse
-import logging
 import readline
 import subprocess
+from datetime import datetime
+from pathlib import Path
+
+
+PROGRAM_NAME = "rsync-via-ssh"
 
 
 def main():
     args = parse_arguments()
+    # Set up logger
+    if args.log_dir is not None:
+        if os.path.isdir(args.log_dir):
+            log_dir = Path(args.log_dir)
+        else:
+            print(f"Warning: arg '--log-dir': {args.log_dir} is not accessible. Using default.", file=sys.stderr)
+    else:
+        log_dir = Path(f"~/.cache/{PROGRAM_NAME}/log")
+        log_dir.expanduser()
+    # Current date and time as string in format YYYY.MM.DD-HH.MM.SS
+    date_and_time = datetime.now().strftime("%Y.%m.%d-%H.%M.%S")
+    log_file = log_dir / f"{date_and_time}.log"
+    log_file_dry_run = log_dir / f"DRY-RUN-{date_and_time}.log"
+    # logging.basicConfig(
+    #     format="%(levelname)s: %(message)s",
+    #     level=logging.INFO,
+    #     filename=log_file)
+
     dest_ip_address = None
     port = None
 
@@ -48,49 +71,45 @@ def main():
         sys.exit(1)
 
     # Set destination
-    dest = f"{os.environ['USER']}@{dest_ip_address}"
+    DEST = f"{os.environ['USER']}@{dest_ip_address}"
     # Export RSYNC_RSH environment variable
     if port:
         os.environ["RSYNC_RSH"] = f"ssh -p {port}"
 
+    # Display prompt to the user
     reply = input("Do a DRY RUN? [Y/n] ")
     if reply == "" or reply in ("Y", "y", "yes", "S", "s", "si"):
-        run_rsync(dry_run=True)
-        print(f"Logs of the dry run saved to:\n{log_file_dry_run}")
+        run_rsync(dest=DEST, dry_run=True, log_file=log_file_dry_run)
+        print(f"\nLogs of the dry run saved to:\n{str(log_file_dry_run)}")
+        subprocess.run(f"less {str(log_file_dry_run)}")
     while True:
         reply = input("Run rsync now? [y/n] ")
         if reply in ("N", "n", "no"):
             sys.exit()
         elif reply in ("Y", "y", "yes", "S", "s", "si"):
             break
-    run_rsync(dry_run=False)
-    print(f"Logs of the run saved to:\n{log_file}")
+    run_rsync(dest=DEST, dry_run=False, log_file=log_file)
+    print(f"\nLogs of the run saved to:\n{str(log_file)}")
 
 
 def parse_arguments() -> argparse.Namespace:
     """Parse and return command-line arguments."""
     parser = argparse.ArgumentParser(
-        description="Sync files and directories between two hosts with rsync via SSH"
-        )
+        description="Sync files and directories between two hosts with rsync via SSH")
     parser.add_argument(
         "-i", "--interactive",
         action="store_true",
-        help="Run the script in interactive mode"
-        )
+        help="Run the script in interactive mode")
     parser.add_argument(
         "-d", "--dest",
         dest="dest_ip_address",
-        help="IP address of destination host"
-        )
+        help="IP address of destination host")
     parser.add_argument(
         "-p", "--port",
         help="SSH port on destination host")
-    log_dir_default = "$HOME/.cache/rsync-via-ssh"  # TODO comply to XDG Base Dirs specification
     parser.add_argument(
         "--log-dir",
-        default=log_dir_default,
-        help="Set the log file directory. Default: $HOME/.cache/rsync-via-ssh"
-        )
+        help="Set the directory where the log files of this run will be saved")
     return parser.parse_args()
 
 
@@ -115,7 +134,7 @@ def check_ip_address(ip_address: str) -> bool:
         return False
 
 
-def run_rsync(dry_run: bool = False, log_file: str = None) -> None:
+def run_rsync(dest: str, dry_run: bool = False, log_file: Path = None) -> None:
     pass
 
 
