@@ -2,7 +2,6 @@
 """rsync-via-ssh.py: Python implementation of the `rsync-via-ssh` script"""
 
 import argparse
-# import logging
 import os
 import re
 import sys
@@ -23,16 +22,15 @@ def main():
             log_dir = Path(args.log_dir)
         else:
             print(f"Warning: arg '--log-dir': {args.log_dir} is not accessible. Using default.", file=sys.stderr)
+            log_dir = Path.home() / ".cache" / PROGRAM_NAME / "log"
     else:
         log_dir = Path.home() / ".cache" / PROGRAM_NAME / "log"
+    if not log_dir.exists():
+        log_dir.mkdir(parents=True, exist_ok=True)
     # Current date and time as string in format YYYY.MM.DD-HH.MM.SS
     date_and_time = datetime.now().strftime("%Y.%m.%d-%H.%M.%S")
     log_file = log_dir / f"{date_and_time}.log"
     log_file_dry_run = log_dir / f"DRY-RUN-{date_and_time}.log"
-    # logging.basicConfig(
-    #     format="%(levelname)s: %(message)s",
-    #     level=logging.INFO,
-    #     filename=log_file)
 
     dest_ip_address = None
     port = None
@@ -125,7 +123,8 @@ def get_source_ip_address() -> str:
 
 
 def check_ip_address(ip_address: str) -> bool:
-    """Check if the provided string is a valid IP address."""
+    """Check if the provided string is a valid IP address.
+    Currently, only IPv4 addresses are supported."""
     regex = "[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}"
     if re.fullmatch(regex, ip_address):
         return True
