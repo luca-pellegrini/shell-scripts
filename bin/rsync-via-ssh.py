@@ -24,8 +24,7 @@ def main():
         else:
             print(f"Warning: arg '--log-dir': {args.log_dir} is not accessible. Using default.", file=sys.stderr)
     else:
-        log_dir = Path(f"~/.cache/{PROGRAM_NAME}/log")
-        log_dir.expanduser()
+        log_dir = Path.home() / ".cache" / PROGRAM_NAME / "log"
     # Current date and time as string in format YYYY.MM.DD-HH.MM.SS
     date_and_time = datetime.now().strftime("%Y.%m.%d-%H.%M.%S")
     log_file = log_dir / f"{date_and_time}.log"
