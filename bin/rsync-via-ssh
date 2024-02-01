@@ -231,8 +231,8 @@ function run_rsync {
     #rsync $args /Data/Podcast/ "$DEST:/Data/Podcast/"
     echo -e "\nCopia di /Data/Programmazione..."
     rsync $args --delete --exclude-from="/Data/Programmazione/rsync_ignore.txt" /Data/Programmazione/ "$DEST:/Data/Programmazione/"
-    #echo -e "\nCopia di /Data/Video..."
-    #rsync $args /Data/Video/ "$DEST:/Data/Video/"
+    echo -e "\nCopia di /Data/Video..."
+    rsync $args --exclude-from="/Data/Video/rsync_exclude.txt" /Data/Video/ "$DEST:/Data/Video/"
 }
 
 ## DRY RUN: perform a trial run with no changes made
@@ -277,7 +277,7 @@ done
 
 ## Unset some variables
 unset args
-unset RSYNC_RSH
+#unset RSYNC_RSH
 
 # Return codes:
 #   0:  Success
