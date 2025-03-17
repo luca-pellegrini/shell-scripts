@@ -13,18 +13,23 @@ from pathlib import Path
 
 PROGRAM_NAME = "rsync-via-ssh"
 
+answer_yes = ("y", "yes", "s", "si", "sì")
+answer_no = ("n", "no")
+
 
 def main():
+    global PROGRAM_NAME, answer_yes, answer_no
     args = parse_arguments()
     # Set up logger
+    log_dir_default = Path.home() / ".cache" / PROGRAM_NAME / "log"
     if args.log_dir is not None:
         if os.path.isdir(args.log_dir):
             log_dir = Path(args.log_dir)
         else:
             print(f"Warning: arg '--log-dir': {args.log_dir} is not accessible. Using default.", file=sys.stderr)
-            log_dir = Path.home() / ".cache" / PROGRAM_NAME / "log"
+            log_dir = log_dir_default
     else:
-        log_dir = Path.home() / ".cache" / PROGRAM_NAME / "log"
+        log_dir = log_dir_default
     if not log_dir.exists():
         log_dir.mkdir(parents=True, exist_ok=True)
     # Current date and time as string in format YYYY.MM.DD-HH.MM.SS
@@ -74,17 +79,17 @@ def main():
         os.environ["RSYNC_RSH"] = f"ssh -p {port}"
 
     # Display prompt to the user
-    reply = input("Do a DRY RUN? [Y/n] ")
-    if reply == "" or reply in ("Y", "y", "yes", "S", "s", "si"):
+    reply = input("Do a DRY RUN? [Y/n] ").lower()
+    if reply == "" or reply in answer_yes:
         run_rsync(dest=DEST, dry_run=True, log_file=log_file_dry_run)
         print(f"\nLogs of the dry run saved to:\n{str(log_file_dry_run)}")
         subprocess.run(f"less {str(log_file_dry_run)}")
-    while True:
-        reply = input("Run rsync now? [y/n] ")
-        if reply in ("N", "n", "no"):
-            sys.exit()
-        elif reply in ("Y", "y", "yes", "S", "s", "si"):
-            break
+    reply = ""
+    while not (reply in answer_yes or reply in answer_no):
+        reply = input("Run rsync now? [y/n] ").lower()
+    if reply in answer_no:
+        print("No changes made. Exiting.")
+        sys.exit(1)
     run_rsync(dest=DEST, dry_run=False, log_file=log_file)
     print(f"\nLogs of the run saved to:\n{str(log_file)}")
 
@@ -133,7 +138,19 @@ def check_ip_address(ip_address: str) -> bool:
 
 
 def run_rsync(dest: str, dry_run: bool = False, log_file: Path = None) -> None:
-    pass
+    r_args = ["rsync", "-rltDvh", "--update", "--mkpath"]
+    if dry_run:
+        r_args.append("--dry-run")
+    with log_file.open("a") as lf:
+        print("\nCopying ~/bin...", file=lf)
+        # lf.flush()  # maybe needed
+        subprocess.run(r_args + ["--exclude", 'MATLAB*', "--exclude", 'matlab*', "--exclude", 'tor-browser*',
+                                 f"{os.path.expanduser('~')}/bin/", f"{dest}:{os.path.expanduser('~')}/bin/"],
+                       stdout=lf, stderr=lf, encoding="UTF-8")
+        print("\nCopying ~/config-files...", file=lf)
+        subprocess.run(r_args + ["--delete", f"{os.path.expanduser('~')}/config-files/", f"{dest}:{os.path.expanduser('~')}/config-files/"],
+                       stdout=lf, stderr=lf, encoding="UTF-8")
+        # TODO: complete function
 
 
 if __name__ == "__main__":
