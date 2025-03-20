@@ -176,22 +176,6 @@ Sorgente:                   $HOSTNAME
 Destinazione: indirizzo IP: $DEST_IP"
 }
 
-# Cartelle da sincronizzare
-#$HOME/bin/
-#$HOME/config-files/
-#/Data/Dendron/
-#/Data/Documenti/
-#/Data/eseguibili/
-#/Data/fonts/
-#/Data/Git/
-#/Data/gufw/
-#/Data/Immagini/
-#/Data/Libri/
-#/Data/Musica/
-#/Data/Programmazione/
-#/Data/thunderbird/
-#/Data/Video/
-
 ## Run rsync
 function run_rsync {
     args="$1 -rltDvh --update --mkpath" # rsync options
@@ -203,32 +187,33 @@ function run_rsync {
     echo -e "\nCopia di /Data/Dendron..."
     rsync $args --delete /Data/Dendron/ "$DEST:/Data/Dendron/"
     echo -e "\nCopia di /Data/Documenti..."
-    rsync $args --delete --exclude "Università" /Data/Documenti/ "$DEST:/Data/Documenti/"
-    rsync $args --delete --exclude "__pycache__/" /Data/Documenti/Università/ "$DEST:/Data/Documenti/Università/"
-    #echo -e "\nCopia di /Data/eseguibili/AppImage..."
-    #rsync $args --delete /Data/eseguibili/AppImage/ "$DEST:/Data/eseguibili/AppImage/"
+    rsync $args --delete --exclude "__pycache__/" --exclude ".idea/" --exclude "Università/Tesi/copia_cartella_remota_DEI/" /Data/Documenti/ "$DEST:/Data/Documenti/"
     echo -e "\nCopia di /Data/eseguibili..."
     rsync $args --delete --exclude "jetbrains/" /Data/eseguibili/ "$DEST:/Data/eseguibili/"
-    #echo -e "\nCopia di /Data/fonts..."
-    #rsync $args --delete /Data/fonts/ "$DEST:/Data/fonts/"
+    # echo -e "\nCopia di /Data/fonts..."
+    # rsync $args --delete /Data/fonts/ "$DEST:/Data/fonts/"
     echo -e "\nCopia di /Data/Git..."
-    rsync $args --delete --exclude-from="/Data/Git/rsync_ignore.txt" /Data/Git/ "$DEST:/Data/Git/"
-    #echo -e "\nCopia di /Data/Immagini..."
-    #rsync $args /Data/Immagini/ "$DEST:/Data/Immagini/"
+    rsync $args --delete --include-from="/Data/Git/rsync_include.txt" --exclude-from="/Data/Git/rsync_exclude.txt" --exclude "Tesi/" /Data/Git/ "$DEST:/Data/Git/"
+    # echo -e "\nCopia di /Data/Git/porting-pmOS..."
+    # rsync $args --delete /Data/Git/porting-pmOS/ "$DEST:/Data/Git/porting-pmOS/"
+    # echo -e "\nCopia di /Data/Immagini..."
+    # rsync $args /Data/Immagini/ "$DEST:/Data/Immagini/"
     echo -e "\nCopia di /Data/Immagini/Screenshots..."
     rsync $args --delete /Data/Immagini/Screenshots/ "$DEST:/Data/Immagini/Screenshots/"
-    echo -e "\nCopia di /Data/Immagini/2023..."
-    rsync $args /Data/Immagini/2023/ "$DEST:/Data/Immagini/2023/"
+    # echo -e "\nCopia di /Data/Immagini/2023..."
+    # rsync $args /Data/Immagini/2023/ "$DEST:/Data/Immagini/2023/"
+    # echo -e "\nCopia di /Data/Immagini/2024..."
+    # rsync $args /Data/Immagini/2024/ "$DEST:/Data/Immagini/2024/"
+    # echo -e "\nCopia di /Data/Immagini/stampate/..."
+    # rsync $args /Data/Immagini/stampate/ "$DEST:/Data/Immagini/stampate/"
     echo -e "\nCopia di /Data/Libri..."
     rsync $args --delete /Data/Libri/ "$DEST:/Data/Libri/"
     echo -e "\nCopia di /Data/Musica..."
     rsync $args --delete --exclude "temp/" --exclude "Downloads/" /Data/Musica/ "$DEST:/Data/Musica/"
-    #echo -e "\nCopia di /Data/Podcast..."
-    #rsync $args /Data/Podcast/ "$DEST:/Data/Podcast/"
-    echo -e "\nCopia di /Data/Programmazione..."
-    rsync $args --delete --exclude-from="/Data/Programmazione/rsync_ignore.txt" /Data/Programmazione/ "$DEST:/Data/Programmazione/"
-    #echo -e "\nCopia di /Data/Video..."
-    #rsync $args /Data/Video/ "$DEST:/Data/Video/"
+    # echo -e "\nCopia di /Data/Podcast..."
+    # rsync $args /Data/Podcast/ "$DEST:/Data/Podcast/"
+    # echo -e "\nCopia di /Data/Video..."
+    # rsync $args --delete --exclude-from="/Data/Video/rsync_exclude.txt" /Data/Video/ "$DEST:/Data/Video/"
 }
 
 ## DRY RUN: perform a trial run with no changes made
@@ -273,9 +258,4 @@ done
 
 ## Unset some variables
 unset args
-unset RSYNC_RSH
-
-# Return codes:
-#   0:  Success
-#   1:  Invalid command line option; generic error
-#   2:  IP address of destination not specified
+#unset RSYNC_RSH
